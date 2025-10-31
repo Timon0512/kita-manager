@@ -4,6 +4,8 @@ import streamlit as st
 import pandas as pd
 import json
 
+st.set_page_config(page_title="Kita Manager")
+
 KIDS_PATH = "kinder.xlsx"
 EVENTS_PATH = "events.json"
 
@@ -116,7 +118,7 @@ def create_event(kids):
         "zuhause": list(kids_dict.values())
     }
 
-    max_id = max(st.session_state["events"].keys(), default=0) + 1
+    max_id = int(max(st.session_state["events"].keys(), default=0)) + 1
 
     if event_anlegen:
         if check_event_exists(datum):
