@@ -71,28 +71,34 @@ def save_json(path, data):
     with open(path, 'w') as f:
         json.dump(data, f)
 
+# st.write(st.session_state["events"])
 
 if 'kids' not in st.session_state:
     st.session_state['kids'] = load_excel(KIDS_PATH)
 if "events" not in st.session_state:
     st.session_state["events"] = load_json(EVENTS_PATH)
 
+def parse_event_date(raw_date):
+    if isinstance(raw_date, datetime.date):
+        return raw_date
+    return datetime.datetime.strptime(str(raw_date), "%Y-%m-%d").date()
+
+today = datetime.date.today()
 upcoming_event_ids = [
     eid
     for eid, event in st.session_state["events"].items()
     if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
 ]
 upcoming_dates = [
-    datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date()
+    parse_event_date(event["datum"])
     for event in st.session_state["events"].values()
-    if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
+    if parse_event_date(event["datum"]) >= today
 ]
-st.write(upcoming_dates)
-# st.write(st.session_state["events"])
+
 @st.dialog("Neues Event anlegen")
 def create_event(kids):
     anzahl = st.number_input("Wie viele Kinder müssen zuhause bleiben?", min_value=1, step=1)
-    datum = st.date_input("Datum der Notbetreuung", format="DD.MM.YYYY")
+    datum = st.date_input("Datum der Notbetreuung", format="DD.MM.YYYY", min_value=today)
 
     kids["Bleibt zuhause"] = False
     kids.loc[kids.head(anzahl).index, "Bleibt zuhause"] = True
@@ -114,7 +120,7 @@ def create_event(kids):
 
     if event_anlegen:
         if check_event_exists(datum):
-            st.warning("Es existiert bereits ein Event an dem Tag. Bitte bearbeite dieses.")
+            st.error("Es existiert bereits ein Event an Tag. Bitte bearbeite das existierende Event.")
         else:
             st.session_state["kids"] = rotate_kids(nom_kids)
             st.session_state["kids"].to_excel(KIDS_PATH, index=False)
@@ -178,7 +184,8 @@ def check_event_exists(date):
         date = date.date()
     elif isinstance(date, str):
         date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-    if date in upcoming_dates:
+    parsed_date = parse_event_date(date)
+    if parsed_date in upcoming_dates:
         return True
     else:
         return False
@@ -257,7 +264,7 @@ st.markdown("""
   margin-bottom: 1.2rem;
   border: 1px solid rgba(0,0,0,0.05);
   text-align: center;
-  width: 45%
+  width: 90%
 }
 
 .event-date {
@@ -307,12 +314,12 @@ if len(st.session_state["events"]) == 0:
     st.success("Aktuell gibt es keine Notbetreuung.")
 
 else:
-    st.markdown(f"##### Aktuell geplante Notbetreuungen ({len(st.session_state['events'])})")
+    st.markdown(f"##### Aktuell geplante Notbetreuungen ({len(upcoming_event_ids)})")
     # Event Cards rendern
     for event_id, event in st.session_state["events"].items():
         date = event.get("datum", "–")
-        #date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-        if not check_event_exists(date):
+        date = parse_event_date(date)
+        if date >= today:
             zuhause = event.get("zuhause", [])
 
             # HTML für Kinderliste ohne \n bauen
