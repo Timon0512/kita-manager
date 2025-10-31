@@ -7,7 +7,6 @@ import json
 KIDS_PATH = "kinder.xlsx"
 EVENTS_PATH = "events.json"
 
-@st.cache_data
 def load_json(path):
     if os.path.exists(path):
         with open(path) as f:
@@ -16,9 +15,9 @@ def load_json(path):
     else:
         return {}
 
-@st.cache_data
 def load_excel(path):
     return pd.read_excel(path)
+
 def rotate_kids(kids: pd.DataFrame) -> pd.DataFrame:
     """
     Verschiebt die Kinder mit den angegebenen Vor- und Nachnamen ans Ende der Liste.
@@ -66,7 +65,6 @@ def delete_event(event_id):
 
     del st.session_state["events"][event_id]
     save_json(EVENTS_PATH, st.session_state["events"])
-
     st.session_state["kids"] = current_kids
 
 def save_json(path, data):
@@ -154,7 +152,8 @@ def edit_event():
             "datum": str(new_date),
             "zuhause": kids_dict,
         }
-
+        save_json(EVENTS_PATH, st.session_state["events"])
+        st.session_state["kids"].to_excel(KIDS_PATH, index=False)
         st.rerun()
 
     if löschen:
