@@ -122,7 +122,7 @@ def create_event(kids):
 
     if event_anlegen:
         if check_event_exists(datum):
-            st.error("Es existiert bereits ein Event an Tag. Bitte bearbeite das existierende Event.")
+            st.error("Es existiert bereits ein Event an dem Tag. Bitte bearbeite das existierende Event oder lösche es und lege ein neues an.")
         else:
             st.session_state["kids"] = rotate_kids(nom_kids)
             st.session_state["kids"].to_excel(KIDS_PATH, index=False)
