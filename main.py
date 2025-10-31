@@ -78,15 +78,17 @@ if 'kids' not in st.session_state:
 if "events" not in st.session_state:
     st.session_state["events"] = load_json(EVENTS_PATH)
 
-upcoming_event_ids = [
-    eid
-    for eid, event in st.session_state["events"].items()
-    if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
-]
+def parse_event_date(raw_date):
+    if isinstance(raw_date, datetime.date):
+        return raw_date
+    return datetime.datetime.strptime(str(raw_date), "%Y-%m-%d").date()
+
+
+today = datetime.date.today()
 upcoming_dates = [
-    event["datum"]
+    parse_event_date(event["datum"])
     for event in st.session_state["events"].values()
-    if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
+    if parse_event_date(event["datum"]) >= today
 ]
 st.write(upcoming_dates)
 # st.write(st.session_state["events"])
@@ -175,7 +177,8 @@ def edit_event():
         st.rerun()
 
 def check_event_exists(date):
-    if date in upcoming_dates:
+    parsed_date = parse_event_date(date)
+    if parsed_date in upcoming_dates:
         print(f"{date} exists in list")
         return True
     else:
@@ -310,8 +313,8 @@ else:
     # Event Cards rendern
     for event_id, event in st.session_state["events"].items():
         date = event.get("datum", "–")
-        date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
-        if not check_event_exists(date):
+        date = parse_event_date(date)
+        if date >= today:
             zuhause = event.get("zuhause", [])
 
             # HTML für Kinderliste ohne \n bauen
