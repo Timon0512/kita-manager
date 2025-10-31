@@ -1,3 +1,4 @@
+import datetime
 import os.path
 
 import streamlit as st
@@ -77,9 +78,20 @@ if 'kids' not in st.session_state:
 if "events" not in st.session_state:
     st.session_state["events"] = load_json(EVENTS_PATH)
 
-
+upcoming_event_ids = [
+    eid
+    for eid, event in st.session_state["events"].items()
+    if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
+]
+upcoming_dates = [
+    event["datum"]
+    for event in st.session_state["events"].values()
+    if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
+]
+st.write(upcoming_dates)
+# st.write(st.session_state["events"])
 @st.dialog("Neues Event anlegen")
-def select_kids(kids):
+def create_event(kids):
     anzahl = st.number_input("Wie viele Kinder müssen zuhause bleiben?", min_value=1, step=1)
     datum = st.date_input("Datum der Notbetreuung", format="DD.MM.YYYY")
 
@@ -102,12 +114,14 @@ def select_kids(kids):
     max_id = max(st.session_state["events"].keys(), default=0) + 1
 
     if event_anlegen:
-        st.session_state["kids"] = rotate_kids(nom_kids)
-        st.session_state["kids"].to_excel(KIDS_PATH, index=False)
-        st.session_state["events"][max_id] = event
-        save_json(EVENTS_PATH, st.session_state["events"])
-
-        st.rerun()
+        if check_event_exists(datum):
+            st.write("Es existiert bereits ein Event an dem Tag. Bitte bearbeite dieses.")
+        else:
+            st.session_state["kids"] = rotate_kids(nom_kids)
+            st.session_state["kids"].to_excel(KIDS_PATH, index=False)
+            st.session_state["events"][max_id] = event
+            save_json(EVENTS_PATH, st.session_state["events"])
+            st.rerun()
 
 @st.dialog("Event bearbeiten")
 def edit_event():
@@ -160,7 +174,13 @@ def edit_event():
         delete_event(event_id)
         st.rerun()
 
-
+def check_event_exists(date):
+    if date in upcoming_dates:
+        print(f"{date} exists in list")
+        return True
+    else:
+        print(f"{date} not exists in list {upcoming_dates}")
+        return False
 # --- Custom CSS ---
 st.markdown("""
 <style>
@@ -290,21 +310,23 @@ else:
     # Event Cards rendern
     for event_id, event in st.session_state["events"].items():
         date = event.get("datum", "–")
-        zuhause = event.get("zuhause", [])
+        date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+        if not check_event_exists(date):
+            zuhause = event.get("zuhause", [])
 
-        # HTML für Kinderliste ohne \n bauen
-        kids_html = "".join(
-            f"<li class='kid-item'>{k['Vorname']} {k['Nachname']}</li>"
-            for k in zuhause
-        )
+            # HTML für Kinderliste ohne \n bauen
+            kids_html = "".join(
+                f"<li class='kid-item'>{k['Vorname']} {k['Nachname']}</li>"
+                for k in zuhause
+            )
 
-        html = f"""
-    <div class="event-card">
-      <div class="event-date">{date}</div>
-      <ul class="kid-list">{kids_html}</ul>
-    </div>
-    """
-        st.markdown(html, unsafe_allow_html=True)
+            html = f"""
+        <div class="event-card">
+          <div class="event-date">{date}</div>
+          <ul class="kid-list">{kids_html}</ul>
+        </div>
+        """
+            st.markdown(html, unsafe_allow_html=True)
 
 if len(st.session_state["events"]) == 0:
 
@@ -347,6 +369,6 @@ for i, row in enumerate(st.session_state['kids'].itertuples(index=False), start=
 
 
 if new_event:
-    select_kids(st.session_state['kids'])
+    create_event(st.session_state['kids'])
 
 
