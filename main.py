@@ -1,6 +1,5 @@
 import datetime
 import os.path
-
 import streamlit as st
 import pandas as pd
 import json
@@ -84,7 +83,7 @@ upcoming_event_ids = [
     if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
 ]
 upcoming_dates = [
-    event["datum"]
+    datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date()
     for event in st.session_state["events"].values()
     if datetime.datetime.strptime(event["datum"], "%Y-%m-%d").date() >= datetime.date.today()
 ]
@@ -115,7 +114,7 @@ def create_event(kids):
 
     if event_anlegen:
         if check_event_exists(datum):
-            st.write("Es existiert bereits ein Event an dem Tag. Bitte bearbeite dieses.")
+            st.warning("Es existiert bereits ein Event an dem Tag. Bitte bearbeite dieses.")
         else:
             st.session_state["kids"] = rotate_kids(nom_kids)
             st.session_state["kids"].to_excel(KIDS_PATH, index=False)
@@ -175,11 +174,13 @@ def edit_event():
         st.rerun()
 
 def check_event_exists(date):
+    if isinstance(date, datetime.datetime):
+        date = date.date()
+    elif isinstance(date, str):
+        date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
     if date in upcoming_dates:
-        print(f"{date} exists in list")
         return True
     else:
-        print(f"{date} not exists in list {upcoming_dates}")
         return False
 # --- Custom CSS ---
 st.markdown("""
@@ -310,7 +311,7 @@ else:
     # Event Cards rendern
     for event_id, event in st.session_state["events"].items():
         date = event.get("datum", "–")
-        date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+        #date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
         if not check_event_exists(date):
             zuhause = event.get("zuhause", [])
 
